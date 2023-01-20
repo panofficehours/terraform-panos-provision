@@ -88,6 +88,7 @@ resource "panos_zone" "dmz" {
   }
 }
 
+# Virtual Router
 resource "panos_virtual_router" "default" {
   name = "default"
   interfaces = [
@@ -100,6 +101,62 @@ resource "panos_virtual_router" "default" {
     panos_ethernet_interface.dmz,
     panos_ethernet_interface.wan,
     panos_ethernet_interface.lan,
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Hypervisor tag
+resource "panos_administrative_tag" "hypervisor" {
+  name    = "hypervisor"
+  vsys    = "vsys1"
+  color   = "color33"
+  comment = "All virtualization hosts"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Address object for proxmox
+resource "panos_address_object" "hou_pve_01" {
+  name        = "hou-pve-01"
+  value       = "10.20.10.1"
+  description = "Primary Proxmox server"
+  tags = [
+    panos_administrative_tag.hypervisor.name
+  ]
+
+  depends_on = [
+    panos_administrative_tag.hypervisor
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# create security policy
+resource "panos_security_policy" "example" {
+  rule {
+    name                  = "LAN to WAN"
+    audit_comment         = "Pushed by Terraform"
+    source_zones          = [panos_zone.lan.name]
+    source_addresses      = ["any"]
+    source_users          = ["any"]
+    destination_zones     = [panos_zone.wan.name]
+    destination_addresses = ["any"]
+    applications          = ["any"]
+    services              = ["application-default"]
+    categories            = ["any"]
+    action                = "allow"
+  }
+
+  depends_on = [
+    panos_zone.wan,
+    panos_zone.lan,
   ]
 
   lifecycle {
