@@ -9,7 +9,5 @@ terraform {
 
 # Configure the panos provider
 provider "panos" {
-  hostname = "san-vfw-01.redtail.com"
-  username = "panofficehours"
-  password = "paloalto1!"
+  hostname = var.hostname
 }
